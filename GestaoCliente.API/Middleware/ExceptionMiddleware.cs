@@ -23,12 +23,14 @@ namespace GestaoClientes.API.Middleware
             }
             catch (DomainException ex)
             {
+                _logger.LogWarning(ex, "Erro de domínio: {Mensagem}", ex.Message);
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 context.Response.ContentType = "application/json";
                 await context.Response.WriteAsync(JsonSerializer.Serialize(new { erro = ex.Message }));
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Erro interno não tratado");
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 context.Response.ContentType = "application/json";
                 await context.Response.WriteAsync(JsonSerializer.Serialize(new { erro = "Ocorreu um erro interno." }));

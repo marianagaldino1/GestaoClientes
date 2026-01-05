@@ -6,12 +6,21 @@ using GestaoClientes.Infrastructure.NHibernate;
 using GestaoClientes.Infrastructure.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using NHibernate;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .WriteTo.Console()
+    .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 
 var sessionFactory = NHibernateSessionFactory.Criar();
@@ -30,15 +39,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Gestão de Clientes API V1");
+        c.RoutePrefix = string.Empty;
     });
 }
 app.UseHttpsRedirection(); 
 app.UseMiddleware<ExceptionMiddleware>();
-try {
-    app.MapControllers();
-}
-catch (Exception ex) {
-    Console.WriteLine($"Erro ao mapear controladores: {ex.Message}");
-}
-
+app.MapControllers();
 app.Run();

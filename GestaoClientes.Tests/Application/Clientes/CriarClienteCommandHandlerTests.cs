@@ -2,6 +2,7 @@
 using GestaoClientes.Application.Interfaces;
 using GestaoClientes.Domain.Entities;
 using GestaoClientes.Domain.Exceptions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -14,18 +15,21 @@ namespace GestaoClientes.Tests.Application.Clientes
     public class CriarClienteCommandHandlerTests
     {
         private readonly Mock<IClienteRepository> _mockRepo;
+        private readonly Mock<ILogger<CriarClienteCommandHandler>> _mockLogger;
         private readonly CriarClienteCommandHandler _handler;
 
         public CriarClienteCommandHandlerTests()
         {
             _mockRepo = new Mock<IClienteRepository>();
-            _handler = new CriarClienteCommandHandler(_mockRepo.Object);
+            _mockLogger = new Mock<ILogger<CriarClienteCommandHandler>>();
+            _handler = new CriarClienteCommandHandler(_mockRepo.Object, _mockLogger.Object);
         }
 
         [Fact]
         public async Task HandleAsync_CriarClienteValido_DeveRetornarId()
         {
             var command = new CriarClienteCommand("Empresa Teste", "01775634000189");
+            Cliente? clienteCriado = null;
 
             _mockRepo
                 .Setup(r => r.ExisteCnpjAsync(It.IsAny<string>()))
@@ -38,14 +42,8 @@ namespace GestaoClientes.Tests.Application.Clientes
             var id = await _handler.HandleAsync(command);
 
             Assert.NotEqual(Guid.Empty, id);
-
-            _mockRepo.Verify(
-                r => r.ExisteCnpjAsync("01775634000189"),
-                Times.Once);
-
-            _mockRepo.Verify(
-                r => r.AdicionarAsync(It.IsAny<Cliente>()),
-                Times.Once);
+            _mockRepo.Verify(r => r.ExisteCnpjAsync("01775634000189"), Times.Once);
+            _mockRepo.Verify(r => r.AdicionarAsync(It.IsAny<Cliente>()), Times.Once);
         }
 
         [Fact]
@@ -58,13 +56,20 @@ namespace GestaoClientes.Tests.Application.Clientes
                 .ReturnsAsync(true);
 
             var ex = await Assert.ThrowsAsync<DomainException>(
-                () => _handler.HandleAsync(command));
+                () => _handler.HandleAsync(command)
+            );
 
             Assert.Contains("Já existe cliente", ex.Message);
 
-            _mockRepo.Verify(
-                r => r.AdicionarAsync(It.IsAny<Cliente>()),
-                Times.Never);
+            _mockRepo.Verify(r => r.AdicionarAsync(It.IsAny<Cliente>()), Times.Never);
+            _mockLogger.Verify(
+                 x => x.Log(
+                     LogLevel.Warning,
+                     It.IsAny<EventId>(),
+                     It.IsAny<It.IsAnyType>(),
+                     It.IsAny<Exception>(),
+                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()
+                 ), Times.AtLeastOnce);
         }
 
         [Fact]
@@ -72,12 +77,9 @@ namespace GestaoClientes.Tests.Application.Clientes
         {
             var command = new CriarClienteCommand("", "01775634000189");
 
-            await Assert.ThrowsAsync<DomainException>(
-                () => _handler.HandleAsync(command));
+            await Assert.ThrowsAsync<DomainException>(() => _handler.HandleAsync(command));
 
-            _mockRepo.Verify(
-                r => r.AdicionarAsync(It.IsAny<Cliente>()),
-                Times.Never);
+            _mockRepo.Verify(r => r.AdicionarAsync(It.IsAny<Cliente>()), Times.Never);
         }
 
         [Fact]
@@ -85,12 +87,9 @@ namespace GestaoClientes.Tests.Application.Clientes
         {
             var command = new CriarClienteCommand("Empresa Teste", "00000000000000");
 
-            await Assert.ThrowsAsync<DomainException>(
-                () => _handler.HandleAsync(command));
+            await Assert.ThrowsAsync<DomainException>(() => _handler.HandleAsync(command));
 
-            _mockRepo.Verify(
-                r => r.AdicionarAsync(It.IsAny<Cliente>()),
-                Times.Never);
+            _mockRepo.Verify(r => r.AdicionarAsync(It.IsAny<Cliente>()), Times.Never);
         }
     }
 

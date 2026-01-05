@@ -6,4 +6,14 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="NHibernate" Version="5.6.0" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GestaoClientes.Application\GestaoClientes.Application.csproj" />
+    <ProjectReference Include="..\GestaoClientes.Domain\GestaoClientes.Domain.csproj" />
+  </ItemGroup>
+
 </Project>
